@@ -16,7 +16,7 @@ import importlib as imp
 from string import ascii_uppercase as ASCII
 from threading import Lock
 
-import syscalls as sc
+import piedpiper.syscalls as sc
 
 # For reference
 

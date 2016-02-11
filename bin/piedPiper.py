@@ -5,13 +5,6 @@
 Pied Piper pipeline runner - call with --help to get basic usage information
 """
 
-__version__ = '0.1.0'
-
-__description__ = "Pied Piper is a deliberately simple pipeline runner that can execute either Ruffus pipelines" \
-                  " or Python3 scripts with the ability to directly interface a grid engine via DRMAA bindings." \
-                  " Pied Piper can be configured via INI files or command line. Library imports for Ruffus or DRMAA" \
-                  " are isolated via the (independent) SysCallInterface class."
-
 import os as os
 import sys as sys
 
@@ -24,6 +17,13 @@ import importlib as imp
 
 from piedpiper.syscallinterface import SysCallInterface
 from piedpiper.notify import send_email_notification
+
+__version__ = '0.1.0'
+
+__description__ = "Pied Piper is a deliberately simple pipeline runner that can execute either Ruffus pipelines" \
+                  " or Python3 scripts with the ability to directly interface a grid engine via DRMAA bindings." \
+                  " Pied Piper can be configured via INI files or command line. Library imports for Ruffus or DRMAA" \
+                  " are isolated via the (independent) SysCallInterface class."
 
 
 def piper_argument_parser():
@@ -200,8 +200,6 @@ if __name__ == '__main__':
         end = time.ctime()
         if args and args.notify:
             notify_user(args.notify, start, end, exc, 'none', 'none')
-    except argp.ArgumentError as ae:
-
     except Exception as e:
         end = time.ctime()
         buf = io.StringIO()
