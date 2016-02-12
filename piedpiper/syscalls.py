@@ -1,7 +1,5 @@
 # coding=utf-8
 
-# coding=utf-8
-
 """
 Module for convenience wrappers to schedule DRMAA jobs
 """

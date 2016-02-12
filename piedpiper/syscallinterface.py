@@ -17,6 +17,7 @@ from string import ascii_uppercase as ASCII
 from threading import Lock
 
 import piedpiper.syscalls as sc
+import piedpiper.jobfunctions as jf
 
 # For reference
 
@@ -270,3 +271,18 @@ class SysCallInterface(object):
         kwargs['lock'] = self.lock
         call_me = fnt.partial(sc.drmaa_arrayjob_argv, **kwargs)
         return call_me
+
+    @staticmethod
+    def get_jobf(jfname):
+        """ Pass generic job functions to the caller. These job functions
+        fit Ruffus pipeline tasks
+
+        :param jfname:
+         :type: str
+        :return:
+         :rtype: callable
+        """
+        if jfname not in jf.JOBFUN_REGISTRY:
+            # not sure what would be best here...
+            sys.stderr.write('\nRequested non-existing job function: {}\n'.format(jfname))
+        return jf.JOBFUN_REGISTRY[jfname]
