@@ -129,6 +129,29 @@ def syscall_in_out_ref(inputfile, outputfile, reference, cmd, syscall):
     return outputfile
 
 
+def syscall_inref_out(inputpair, outputfile, cmd, refext, syscall):
+    """
+    :param inputpair:
+    :param outputfile:
+    :param cmd:
+    :param syscall:
+    :return:
+    """
+    assert len(inputpair) == 2, 'Too many (or not enough) input files: {}'.format(inputpair)
+    if inputpair[1].endswith(refext):
+        reference = inputpair[1]
+        inputfile = inputpair[0]
+    else:
+        reference = inputpair[0]
+        inputfile = inputpair[1]
+    fmt = {'inputfile': inputfile, 'outputfile': outputfile, 'referencefile': reference}
+    cmd = cmd.format(**fmt)
+    out, err = syscall(cmd)
+    out, err = _check_job(out, err)
+    assert os.path.isfile(outputfile), 'Output path is not a file: {} - job failed?'.format(outputfile)
+    return
+
+
 def syscall_ins_out(inputfiles, outputfile, cmd, syscall, posrep=False):
     """ Merge/join job, several input files create a single output file
     :param inputfiles:
@@ -176,6 +199,7 @@ def syscall_ins_pat(inputfiles, outputpattern, outdir, filter, cmd, syscall, pos
 
 JOBFUN_REGISTRY = {'raw': syscall_raw,
                    'in_out': syscall_in_out,
+                   'inref_out': syscall_inref_out,
                    'in_pat': syscall_ins_pat,
                    'in_out_ref': syscall_in_out_ref,
                    'ins_out': syscall_ins_out,
