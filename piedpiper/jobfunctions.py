@@ -224,6 +224,9 @@ def syscall_inpair_out(inputpair, outputfile, cmd, syscall):
     :param syscall:
     :return:
     """
+    if len(inputpair) == 1:
+        inputpair = inputpair[0]
+    assert len(inputpair) == 2, 'Missing paired input: {}'.format(inputpair)
     assert all([os.path.isfile(f) for f in inputpair]), 'Not all input paths are files: {}'.format(inputpair)
     cmd = cmd.format(**{'inputfile1': inputpair[0], 'inputfile2': inputpair[1], 'outputfile': outputfile})
     out, err = syscall(cmd)
