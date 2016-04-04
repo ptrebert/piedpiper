@@ -216,6 +216,22 @@ def syscall_ins_pat(inputfiles, outputpattern, outdir, filter, cmd, syscall, pos
     return outfiles
 
 
+def syscall_inpair_out(inputpair, outputfile, cmd, syscall):
+    """
+    :param inputpair:
+    :param outputfile:
+    :param cmd:
+    :param syscall:
+    :return:
+    """
+    assert all([os.path.isfile(f) for f in inputpair]), 'Not all input paths are files: {}'.format(inputpair)
+    cmd = cmd.format(**{'inputfile1': inputpair[0], 'inputfile2': inputpair[1], 'outputfile': outputfile})
+    out, err = syscall(cmd)
+    out, err = _check_job(out, err)
+    assert os.path.isfile(outputfile), 'Output path is not a file: {} - job failed?'.format(outputfile)
+    return outputfile
+
+
 JOBFUN_REGISTRY = {'raw': syscall_raw,
                    'in_out': syscall_in_out,
                    'inref_out': syscall_inref_out,
@@ -223,4 +239,5 @@ JOBFUN_REGISTRY = {'raw': syscall_raw,
                    'in_out_ref': syscall_in_out_ref,
                    'ins_out': syscall_ins_out,
                    'ins_pat': syscall_ins_pat,
-                   'ins_out_ref': syscall_ins_out_ref}
+                   'ins_out_ref': syscall_ins_out_ref,
+                   'inpair_out': syscall_inpair_out}
