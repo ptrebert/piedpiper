@@ -235,6 +235,25 @@ def syscall_inpair_out(inputpair, outputfile, cmd, syscall):
     return outputfile
 
 
+def syscall_in_outpair(inputfile, outputpair, cmd, syscall):
+    """
+    :param inputfile:
+    :param outputpair:
+    :param cmd:
+    :param syscall:
+    :return:
+    """
+    if len(outputpair) == 1:
+        outputpair = outputpair[0]
+    assert len(outputpair) == 2, 'Missing paired output: {}'.format(outputpair)
+    assert os.path.isfile(inputfile), 'Invalid path to input file: {}'.format(inputfile)
+    cmd = cmd.format(**{'inputfile': inputfile, 'outputfile1': outputpair[0], 'outputfile2': outputpair[1]})
+    out, err = syscall(cmd)
+    out, err = _check_job(out, err)
+    assert all([os.path.isfile(f) for f in outputpair]), 'No output files created - job failed?'
+    return outputpair
+
+
 JOBFUN_REGISTRY = {'raw': syscall_raw,
                    'in_out': syscall_in_out,
                    'inref_out': syscall_inref_out,
@@ -243,4 +262,5 @@ JOBFUN_REGISTRY = {'raw': syscall_raw,
                    'ins_out': syscall_ins_out,
                    'ins_pat': syscall_ins_pat,
                    'ins_out_ref': syscall_ins_out_ref,
-                   'inpair_out': syscall_inpair_out}
+                   'inpair_out': syscall_inpair_out,
+                   'in_outpair': syscall_in_outpair}
