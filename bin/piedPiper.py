@@ -150,9 +150,11 @@ def notify_user(user_addr, start, end, exc, err, trb):
     :param trb: if applicable the stack traceback
     :return:
     """
+    if len(trb) > 2000:
+        trb = trb[:500] + '\n\n[ ... BUFFER TOO LARGE ... ]\n\n' + trb[-500:]
+    if len(err) > 2000:
+        err = err[:500] + '\n\n[ ... BUFFER TOO LARGE ... ]\n\n' + err[-500:]
     try:
-        if len(trb) > 2000:
-            trb = trb[:500] + '\n\n[ ... BUFFER TOO LARGE ... ]\n\n' + trb[-500:]
         subject = 'Pied Piper run exit: {}'.format(exc)
         username = user_addr.split('@')[0]
         body = 'Hello {username},\nyour Pied Piper run finished with status: {exit}\n'\
