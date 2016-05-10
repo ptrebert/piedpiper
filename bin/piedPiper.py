@@ -151,9 +151,9 @@ def notify_user(user_addr, start, end, exc, err, trb):
     :return:
     """
     if len(trb) > 2000:
-        trb = trb[:500] + '\n\n[ ... BUFFER TOO LARGE ... ]\n\n' + trb[-500:]
+        trb = trb[:750] + '\n\n[ ... BUFFER TOO LARGE ... ]\n\n' + trb[-750:]
     if len(err) > 2000:
-        err = err[:500] + '\n\n[ ... BUFFER TOO LARGE ... ]\n\n' + err[-500:]
+        err = err[:750] + '\n\n[ ... BUFFER TOO LARGE ... ]\n\n' + err[-750:]
     try:
         subject = 'Pied Piper run exit: {}'.format(exc)
         username = user_addr.split('@')[0]
