@@ -140,7 +140,7 @@ def make_debug_dump(config):
     return
 
 
-def notify_user(user_addr, start, end, exc, err, trb):
+def notify_user(user_addr, start, end, exc, runinfo, err, trb):
     """
     :param user_addr:
     :param start:
@@ -151,18 +151,19 @@ def notify_user(user_addr, start, end, exc, err, trb):
     :return:
     """
     if len(trb) > 2000:
-        trb = trb[:750] + '\n\n[ ... BUFFER TOO LARGE ... ]\n\n' + trb[-750:]
+        trb = trb[:1000] + '\n\n[ ... BUFFER TOO LARGE ... ]\n\n' + trb[-1000:]
     if len(err) > 2000:
-        err = err[:750] + '\n\n[ ... BUFFER TOO LARGE ... ]\n\n' + err[-750:]
+        err = err[:1000] + '\n\n[ ... BUFFER TOO LARGE ... ]\n\n' + err[-1000:]
     try:
         subject = 'Pied Piper run exit: {}'.format(exc)
         username = user_addr.split('@')[0]
         body = 'Hello {username},\nyour Pied Piper run finished with status: {exit}\n'\
                'Start time: {start}\nEnd time: {end}\n'\
-               'Exception: {error}\nStack traceback: {trace}\n\n'\
+               'Run info: {runinfo}\n\n'\
+               'Exception: {error}\n\nStack traceback: {trace}\n\n' \
                'Have a nice day!\nPied Piper'
         values = {'username': username, 'exit': exc, 'start': start, 'end': end,
-                  'error': err, 'trace': trb}
+                  'error': err, 'trace': trb, 'runinfo': runinfo}
         body = body.format(**values)
         send_email_notification(user_addr, 'pied.piper@pipeline.run', subject, body)
     except Exception as e:
@@ -202,8 +203,9 @@ if __name__ == '__main__':
                 # note that this should be caught already by ArgumentParser
                 raise RuntimeError('Pied Piper run mode {} not recognized'.format(args.runmode))
         end = time.ctime()
+        run_info = os.path.basename(args.runconfig) + ' / ' + config.get('Run', 'load_name')
         if args and args.notify:
-            notify_user(args.notify, start, end, exc, 'none', 'none')
+            notify_user(args.notify, start, end, exc, run_info, 'none', 'none')
     except Exception as e:
         end = time.ctime()
         buf = io.StringIO()
