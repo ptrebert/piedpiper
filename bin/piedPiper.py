@@ -176,6 +176,7 @@ if __name__ == '__main__':
     exc = 0
     start = time.ctime()
     args = None
+    run_info = 'ERROR'
     try:
         args, unknown_args = piper_argument_parser()
         config = piper_configuration_parser(args)
@@ -192,6 +193,7 @@ if __name__ == '__main__':
             sys.exit(0)
         imp_ruffus_drmaa = args.runmode == 'ruffus'
         imp_drmaa = args.runmode == 'script' and args.gridmode
+        run_info = os.path.basename(args.runconfig) + ' / ' + config.get('Run', 'load_name')
         with SysCallInterface(imp_ruffus_drmaa, imp_drmaa) as sci_obj:
             mod = imp.import_module(mod_name)
             if args.runmode == 'ruffus':
@@ -203,7 +205,6 @@ if __name__ == '__main__':
                 # note that this should be caught already by ArgumentParser
                 raise RuntimeError('Pied Piper run mode {} not recognized'.format(args.runmode))
         end = time.ctime()
-        run_info = os.path.basename(args.runconfig) + ' / ' + config.get('Run', 'load_name')
         if args and args.notify:
             notify_user(args.notify, start, end, exc, run_info, 'none', 'none')
     except Exception as e:
@@ -214,6 +215,6 @@ if __name__ == '__main__':
         sys.stderr.write('\n{}\n'.format(buf.getvalue()))
         exc = 1
         if args.notify:
-            notify_user(args.notify, start, end, exc, str(e), buf.getvalue())
+            notify_user(args.notify, start, end, exc, run_info, str(e), buf.getvalue())
     finally:
         sys.exit(exc)
