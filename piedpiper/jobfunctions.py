@@ -10,7 +10,22 @@ in each and every pipeline script
 """
 
 import os as os
+import itertools as itt
 import fnmatch as fnm
+
+
+def _flatten_nested_iterable(struct):
+    """
+    :param struct:
+    :return:
+    """
+    result = []
+    for item in struct:
+        if hasattr(item, '__iter__') and not isinstance(item, str):
+            result.extend(_flatten_nested_iterable(item))
+        else:
+            result.append(item)
+    return result
 
 
 def _normalize_job_output(output):
@@ -138,9 +153,10 @@ def syscall_ins_out_ref(inputfiles, outputfile, reference, cmd, syscall):
     :param syscall:
     :return:
     """
-    assert all([os.path.isfile(f) for f in inputfiles]), 'Invalid path to input file(s): {}'.format(inputfiles)
+    flattened = _flatten_nested_iterable(inputfiles)
+    assert all([os.path.isfile(f) for f in flattened]), 'Not all input paths are files: {}'.format(flattened)
     assert os.path.isfile(reference), 'Invalid path to reference file: {}'.format(reference)
-    fmt = {'inputfiles': ' '.join(inputfiles), 'outputfile': outputfile, 'referencefile': reference}
+    fmt = {'inputfiles': ' '.join(flattened), 'outputfile': outputfile, 'referencefile': reference}
     cmd = cmd.format(**fmt)
     out, err = syscall(cmd)
     out, err = _check_job(out, err)
@@ -177,13 +193,14 @@ def syscall_ins_out(inputfiles, outputfile, cmd, syscall, posrep=False):
     :param outputfile:
     :return:
     """
-    assert all([os.path.isfile(f) for f in inputfiles]), 'Not all input paths are files: {}'.format(inputfiles)
+    flattened = _flatten_nested_iterable(inputfiles)
+    assert all([os.path.isfile(f) for f in flattened]), 'Not all input paths are files: {}'.format(flattened)
     assert outputfile, 'Received no output file'
-    inputfiles = ' '.join(inputfiles)
+    flattened = ' '.join(flattened)
     if posrep:
-        cmd = cmd.format(*(inputfiles, outputfile))
+        cmd = cmd.format(*(flattened, outputfile))
     else:
-        cmd = cmd.format(**{'inputfiles': inputfiles, 'outputfile': outputfile})
+        cmd = cmd.format(**{'inputfiles': flattened, 'outputfile': outputfile})
     out, err = syscall(cmd)
     out, err = _check_job(out, err)
     assert os.path.isfile(outputfile), 'Output path is not a file: {} - job failed?'.format(outputfile)
@@ -197,16 +214,17 @@ def syscall_ins_pat(inputfiles, outputpattern, outdir, filter, cmd, syscall, pos
 
     :return: list of files
     """
-    assert all([os.path.isfile(f) for f in inputfiles]), 'Not all input paths are files: {}'.format(inputfiles)
+    flattened = _flatten_nested_iterable(inputfiles)
+    assert all([os.path.isfile(f) for f in flattened]), 'Not all input paths are files: {}'.format(flattened)
     assert os.path.isdir(outdir), 'Output dir is not a folder: {}'.format(outdir)
     outfiles = os.listdir(outdir)
     outfiles = fnm.filter(outfiles, filter)
     if len(outfiles) > 0:
         return [os.path.join(outdir, f) for f in outfiles]
     if posrep:
-        cmd = cmd.format(*(str(inputfiles),))
+        cmd = cmd.format(*(' '.join(flattened),))
     else:
-        cmd = cmd.format(**{'inputfiles': str(inputfiles)})
+        cmd = cmd.format(**{'inputfiles': ' '.join(flattened)})
     out, err = syscall(cmd)
     out, err = _check_job(out, err)
     outfiles = os.listdir(outdir)
