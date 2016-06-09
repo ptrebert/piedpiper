@@ -18,7 +18,7 @@ import importlib as imp
 from piedpiper.syscallinterface import SysCallInterface
 from piedpiper.notify import send_email_notification
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 __description__ = "Pied Piper is a deliberately simple pipeline runner that can execute either Ruffus pipelines" \
                   " or Python3 scripts with the ability to directly interface a grid engine via DRMAA bindings." \
@@ -53,6 +53,11 @@ def piper_argument_parser():
                         help='If a valid email address is specified, a notification is sent upon exit of'
                              ' Pied Piper. Note that this requires that localhost is configured as SMTP'
                              ' server or knows where to find one.')
+    parser.add_argument('--limit-size', '-sz', dest='sizelimit', default=3000, type=int,
+                        help='Specify the number of characters to send via email from the exception message'
+                             ' and from the stack traceback. This number is divided by two and the first'
+                             ' and the last N/2 characters are included in the email. This avoids overly'
+                             ' long emails that may take a long time to load. Default: 3000 = 2 * 1500')
     args, unknown_args = parser.parse_known_args()
     return args, unknown_args
 
@@ -140,20 +145,22 @@ def make_debug_dump(config):
     return
 
 
-def notify_user(user_addr, start, end, exc, runinfo, err, trb):
+def notify_user(user_addr, start, end, exc, runinfo, err, trb, limit):
     """
     :param user_addr:
     :param start:
     :param end:
     :param exc: exit code
-    :param err: if applicable the exception
-    :param trb: if applicable the stack traceback
+    :param err: the exception, if applicable
+    :param trb: the stack traceback, if applicable
+    :param limit: character limit for sending error information
     :return:
     """
-    if len(trb) > 2000:
-        trb = trb[:1000] + '\n\n[ ... BUFFER TOO LARGE ... ]\n\n' + trb[-1000:]
-    if len(err) > 2000:
-        err = err[:1000] + '\n\n[ ... BUFFER TOO LARGE ... ]\n\n' + err[-1000:]
+    half_limit = limit // 2
+    if len(trb) > limit:
+        trb = trb[:half_limit] + '\n\n[ ... SIZE LIMIT REACHED ... ]\n\n' + trb[-half_limit:]
+    if len(err) > limit:
+        err = err[:half_limit] + '\n\n[ ... SIZE LIMIT REACHED ... ]\n\n' + err[-half_limit:]
     try:
         subject = 'Pied Piper run exit: {}'.format(exc)
         username = user_addr.split('@')[0]
