@@ -213,7 +213,7 @@ if __name__ == '__main__':
                 raise RuntimeError('Pied Piper run mode {} not recognized'.format(args.runmode))
         end = time.ctime()
         if args and args.notify:
-            notify_user(args.notify, start, end, exc, run_info, 'none', 'none')
+            notify_user(args.notify, start, end, exc, run_info, 'none', 'none', args.sizelimit)
     except Exception as e:
         end = time.ctime()
         buf = io.StringIO()
@@ -222,6 +222,6 @@ if __name__ == '__main__':
         sys.stderr.write('\n{}\n'.format(buf.getvalue()))
         exc = 1
         if args.notify:
-            notify_user(args.notify, start, end, exc, run_info, str(e), buf.getvalue())
+            notify_user(args.notify, start, end, exc, run_info, str(e), buf.getvalue(), args.sizelimit)
     finally:
         sys.exit(exc)
