@@ -69,6 +69,21 @@ def _check_job(out, err):
     return out, err
 
 
+def recursive_collect(basedir, filtpat):
+    """
+    :param basedir:
+    :param filtpat:
+    :return:
+    """
+    collected = []
+    for root, dirs, files in os.walk(basedir, followlinks=False):
+        if files:
+            files = fnm.filter(files, filtpat)
+            for f in files:
+                collected.append(os.path.join(root, f))
+    return collected
+
+
 def syscall_raw(cmd, syscall):
     """
     :param cmd:
@@ -103,7 +118,7 @@ def syscall_in_out(inputfile, outputfile, cmd, syscall, posrep=False):
     return outputfile
 
 
-def syscall_in_pat(inputfile, outputfiles, outdir, filter, cmd, syscall, posrep=False):
+def syscall_in_pat(inputfile, outputfiles, outdir, filter, cmd, syscall, posrep=False, rec=False):
     """ System call for cases where a single input file is split
     into multiple output files (number determined at runtime), hence
     outputfiles represents a matching pattern rather than a filename
@@ -117,9 +132,12 @@ def syscall_in_pat(inputfile, outputfiles, outdir, filter, cmd, syscall, posrep=
         cmd = cmd.format(**{'inputfile': inputfile})
     out, err = syscall(cmd)
     out, err = _check_job(out, err)
-    outfiles = os.listdir(outdir)
-    outfiles = fnm.filter(outfiles, filter)
-    outfiles = [os.path.join(outdir, f) for f in outfiles]
+    if rec:
+        outfiles = recursive_collect(outdir, filter)
+    else:
+        outfiles = os.listdir(outdir)
+        outfiles = fnm.filter(outfiles, filter)
+        outfiles = [os.path.join(outdir, f) for f in outfiles]
     assert len(outfiles) > 0, 'No output files produced by command {} with filter pattern {}'.format(cmd, filter)
     return outfiles
 
@@ -207,7 +225,7 @@ def syscall_ins_out(inputfiles, outputfile, cmd, syscall, posrep=False):
     return outputfile
 
 
-def syscall_ins_pat(inputfiles, outputpattern, outdir, filter, cmd, syscall, posrep=False):
+def syscall_ins_pat(inputfiles, outputpattern, outdir, filter, cmd, syscall, posrep=False, rec=False):
     """ System call for cases where a set of input files is split
     into multiple output files (number determined at runtime), hence
     outputfiles represents a matching pattern rather than a filename
@@ -227,9 +245,12 @@ def syscall_ins_pat(inputfiles, outputpattern, outdir, filter, cmd, syscall, pos
         cmd = cmd.format(**{'inputfiles': ' '.join(flattened)})
     out, err = syscall(cmd)
     out, err = _check_job(out, err)
-    outfiles = os.listdir(outdir)
-    outfiles = fnm.filter(outfiles, filter)
-    outfiles = [os.path.join(outdir, f) for f in outfiles]
+    if rec:
+        outfiles = recursive_collect(outdir, filter)
+    else:
+        outfiles = os.listdir(outdir)
+        outfiles = fnm.filter(outfiles, filter)
+        outfiles = [os.path.join(outdir, f) for f in outfiles]
     assert len(outfiles) > 0, 'No output files produced by command {} with filter pattern {}'.format(cmd, outputpattern)
     return outfiles
 
