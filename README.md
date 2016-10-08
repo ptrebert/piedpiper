@@ -2,4 +2,4 @@
 Pipeline runner mainly designed for Ruffus pipelines; supports DRMAA compatible grid engines
 
 # Documentation
-Read the full documentation on [ReadTheDocs](http://piedpiper.readthedocs.io "Pied Piper")
+Read the full documentation on [ReadTheDocs](http://piedpiper.readthedocs.io/ "RTD - Pied Piper")
