@@ -10,7 +10,11 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
+   license
 
+.. automodule:: piedpiper
+   :members:
+   :undoc-members:
 
 
 Indices and tables
