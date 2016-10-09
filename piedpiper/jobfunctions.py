@@ -30,8 +30,10 @@ def _flatten_nested_iterable(struct):
 
 def _normalize_job_output(output):
     """
-    :param output:
-    :return:
+    :param output: Tool output on stdout/stderr
+    :type output: str or bytes, list of str or bytes
+    :return: normalized output, all parts concatenated (if applicable)
+    :rtype: str
     """
     if isinstance(output, list):
         if len(output) == 0:
@@ -52,9 +54,22 @@ def _normalize_job_output(output):
 
 def _check_job(out, err):
     """
-    :param out:
-    :param err:
-    :return:
+    If a job returned output on stderr, this checks for various keywords in said
+    output to determine if the job failed. Unfortunately, some developers do not
+    follow the simple rule of a non-zero exit status in case of errors, so this
+    heuristic has turned out to be necessary.
+    Specifically, this checks for the following keywords:
+
+    ['error', 'fail', 'failed', 'failure', 'segfault', 'abort']
+
+    :param out: Job output on stdout
+    :type out: str or bytes, list of str or bytes
+    :param err: Job output on stderr
+    :type err: str or bytes, list of str or bytes
+    :return: checked output of stdout and stderr
+    :rtype: 2-tuple of str
+    :raises ruffus.JobSignalledBreak:
+    :raises RuntimeError:
     """
     error_notes = ['error', 'fail', 'failed', 'failure', 'segfault', 'abort']
     out = _normalize_job_output(out)
@@ -69,6 +84,24 @@ def _check_job(out, err):
     return out, err
 
 
+def _run_command(cmd, formatter, syscall, posrep=False):
+    """
+    :param cmd:
+    :param formatter:
+    :param syscall:
+    :param posrep:
+    :return: None
+    :rtype: NoneType
+    """
+    if posrep:
+        tmp = cmd.format(*formatter)
+    else:
+        tmp = cmd.format(**formatter)
+    out, err = syscall(tmp)
+    out, err = _check_job(out, err)
+    return None
+
+
 def recursive_collect(basedir, filtpat):
     """
     :param basedir:
@@ -81,18 +114,23 @@ def recursive_collect(basedir, filtpat):
             files = fnm.filter(files, filtpat)
             for f in files:
                 collected.append(os.path.join(root, f))
+    assert collected, 'No files collected starting at top folder {}'.format(basedir)
     return collected
 
 
 def syscall_raw(cmd, syscall):
     """
-    :param cmd:
-    :param syscall:
-    :return:
+    Execute command line w/o formatting, check output and return
+
+    :param cmd: The command line to execute
+     :type: str
+    :param syscall: A callable/function object expecting a single argument
+     :type: function
+    :return: None
+     :type: NoneType
     """
-    out, err = syscall(cmd)
-    out, err = _check_job(out, err)
-    return
+    _ = _run_command(cmd, tuple(), syscall, posrep=True)
+    return None
 
 
 def syscall_in_out(inputfile, outputfile, cmd, syscall, posrep=False):
@@ -108,18 +146,17 @@ def syscall_in_out(inputfile, outputfile, cmd, syscall, posrep=False):
     assert os.path.isfile(inputfile), 'Input path is not a file: {}'.format(inputfile)
     assert outputfile, 'Received no output file'
     if posrep:
-        cmd = cmd.format(*(inputfile, outputfile))
+        formatter = (inputfile, outputfile)
     else:
-        files = {'inputfile': inputfile, 'outputfile': outputfile}
-        cmd = cmd.format(**files)
-    out, err = syscall(cmd)
-    out, err = _check_job(out, err)
+        formatter = {'inputfile': inputfile, 'outputfile': outputfile}
+    _ = _run_command(cmd, formatter, syscall, posrep)
     assert os.path.isfile(outputfile), 'Output path is not a file: {} - job failed?'.format(outputfile)
     return outputfile
 
 
 def syscall_in_pat(inputfile, outputfiles, outdir, filter, cmd, syscall, posrep=False, rec=False):
-    """ System call for cases where a single input file is split
+    """
+    System call for cases where a single input file is split
     into multiple output files (number determined at runtime), hence
     outputfiles represents a matching pattern rather than a filename
 
@@ -127,11 +164,10 @@ def syscall_in_pat(inputfile, outputfiles, outdir, filter, cmd, syscall, posrep=
     """
     assert os.path.isfile(inputfile), 'Input path is not a file: {}'.format(inputfile)
     if posrep:
-        cmd = cmd.format(*(inputfile,))
+        formatter = inputfile,
     else:
-        cmd = cmd.format(**{'inputfile': inputfile})
-    out, err = syscall(cmd)
-    out, err = _check_job(out, err)
+        formatter = {'inputfile': inputfile}
+    _ = _run_command(cmd, formatter, syscall, posrep)
     if rec:
         outfiles = recursive_collect(outdir, filter)
     else:
@@ -155,9 +191,7 @@ def syscall_in_out_ref(inputfile, outputfile, reference, cmd, syscall):
     assert outputfile, 'Received no output file'
     assert os.path.isfile(reference), 'Reference path is not a file: {}'.format(outputfile)
     fmt = {'inputfile': inputfile, 'outputfile': outputfile, 'referencefile': reference}
-    cmd = cmd.format(**fmt)
-    out, err = syscall(cmd)
-    out, err = _check_job(out, err)
+    _ = _run_command(cmd, fmt, syscall)
     assert os.path.isfile(outputfile), 'Output path is not a file: {} - job failed?'.format(outputfile)
     return outputfile
 
@@ -175,9 +209,7 @@ def syscall_ins_out_ref(inputfiles, outputfile, reference, cmd, syscall):
     assert all([os.path.isfile(f) for f in flattened]), 'Not all input paths are files: {}'.format(flattened)
     assert os.path.isfile(reference), 'Invalid path to reference file: {}'.format(reference)
     fmt = {'inputfiles': ' '.join(flattened), 'outputfile': outputfile, 'referencefile': reference}
-    cmd = cmd.format(**fmt)
-    out, err = syscall(cmd)
-    out, err = _check_job(out, err)
+    _ = _run_command(cmd, fmt, syscall)
     assert os.path.isfile(outputfile), 'Output path is not a file: {} - job failed?'.format(outputfile)
     return outputfile
 
@@ -198,15 +230,15 @@ def syscall_inref_out(inputpair, outputfile, cmd, refext, syscall):
         reference = inputpair[0]
         inputfile = inputpair[1]
     fmt = {'inputfile': inputfile, 'outputfile': outputfile, 'referencefile': reference}
-    cmd = cmd.format(**fmt)
-    out, err = syscall(cmd)
-    out, err = _check_job(out, err)
+    _ = _run_command(cmd, fmt, syscall)
     assert os.path.isfile(outputfile), 'Output path is not a file: {} - job failed?'.format(outputfile)
     return outputfile
 
 
 def syscall_ins_out(inputfiles, outputfile, cmd, syscall, posrep=False):
-    """ Merge/join job, several input files create a single output file
+    """
+    Merge/join job, several input files create a single output file
+
     :param inputfiles:
     :param outputfile:
     :return:
@@ -216,17 +248,17 @@ def syscall_ins_out(inputfiles, outputfile, cmd, syscall, posrep=False):
     assert outputfile, 'Received no output file'
     flattened = ' '.join(flattened)
     if posrep:
-        cmd = cmd.format(*(flattened, outputfile))
+        fmt = (flattened, outputfile)
     else:
-        cmd = cmd.format(**{'inputfiles': flattened, 'outputfile': outputfile})
-    out, err = syscall(cmd)
-    out, err = _check_job(out, err)
+        fmt = {'inputfiles': flattened, 'outputfile': outputfile}
+    _ = _run_command(cmd, fmt, syscall, posrep)
     assert os.path.isfile(outputfile), 'Output path is not a file: {} - job failed?'.format(outputfile)
     return outputfile
 
 
 def syscall_ins_pat(inputfiles, outputpattern, outdir, filter, cmd, syscall, posrep=False, rec=False):
-    """ System call for cases where a set of input files is split
+    """
+    System call for cases where a set of input files is split
     into multiple output files (number determined at runtime), hence
     outputfiles represents a matching pattern rather than a filename
 
@@ -240,11 +272,10 @@ def syscall_ins_pat(inputfiles, outputpattern, outdir, filter, cmd, syscall, pos
     if len(outfiles) > 0:
         return [os.path.join(outdir, f) for f in outfiles]
     if posrep:
-        cmd = cmd.format(*(' '.join(flattened),))
+        fmt = ' '.join(flattened),
     else:
-        cmd = cmd.format(**{'inputfiles': ' '.join(flattened)})
-    out, err = syscall(cmd)
-    out, err = _check_job(out, err)
+        fmt = {'inputfiles': ' '.join(flattened)}
+    _ = _run_command(cmd, fmt, syscall, posrep)
     if rec:
         outfiles = recursive_collect(outdir, filter)
     else:
@@ -263,13 +294,12 @@ def syscall_inpair_out(inputpair, outputfile, cmd, syscall):
     :param syscall:
     :return:
     """
-    if len(inputpair) == 1:
+    if len(inputpair) == 1:  # stumble across nested structure every now and then
         inputpair = inputpair[0]
     assert len(inputpair) == 2, 'Missing paired input: {}'.format(inputpair)
     assert all([os.path.isfile(f) for f in inputpair]), 'Not all input paths are files: {}'.format(inputpair)
-    cmd = cmd.format(**{'inputfile1': inputpair[0], 'inputfile2': inputpair[1], 'outputfile': outputfile})
-    out, err = syscall(cmd)
-    out, err = _check_job(out, err)
+    fmt = {'inputfile1': inputpair[0], 'inputfile2': inputpair[1], 'outputfile': outputfile}
+    _ = _run_command(cmd, fmt, syscall)
     assert os.path.isfile(outputfile), 'Output path is not a file: {} - job failed?'.format(outputfile)
     return outputfile
 
@@ -286,9 +316,8 @@ def syscall_in_outpair(inputfile, outputpair, cmd, syscall):
         outputpair = outputpair[0]
     assert len(outputpair) == 2, 'Missing paired output: {}'.format(outputpair)
     assert os.path.isfile(inputfile), 'Invalid path to input file: {}'.format(inputfile)
-    cmd = cmd.format(**{'inputfile': inputfile, 'outputfile1': outputpair[0], 'outputfile2': outputpair[1]})
-    out, err = syscall(cmd)
-    out, err = _check_job(out, err)
+    fmt = {'inputfile': inputfile, 'outputfile1': outputpair[0], 'outputfile2': outputpair[1]}
+    _ = _run_command(cmd, fmt, syscall)
     assert all([os.path.isfile(f) for f in outputpair]), 'No output files created - job failed?'
     return outputpair
 
