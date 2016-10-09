@@ -1,17 +1,22 @@
 # coding=utf-8
 
 """
-Module wrapping job functions suitable for Ruffus pipelines
-The functions will be passed to the pipeline module via the
-SyscallInterface object
-Design-wise, this appears to be a bit quirky (?), but at least one can
-avoid importing a module with generic inputfile -> outputfile job functions
-in each and every pipeline script
+A module dedicated to wrapping job functions suitable for pipelines, be it Ruffus or plain Python.
+In spirit, most of these functions mimic the behavior of their Ruffus counterparts (but do not depend
+on Ruffus being importable) in terms of number of input and output files.
+Additionally, each function takes at least a parameter representing the command line
+and the respective system call to execute it.
+The functions are exposed to the pipeline via the System Call Interface object.
+While this design decision may seem a bit odd, it avoids that a generic module
+containing these functions has to be imported in each pipeline script (separation of concerns).
 """
 
 import os as os
 import itertools as itt
 import fnmatch as fnm
+
+# TODO Refactor some functions
+# there is no necessity to keep single- and multi-input functions separate
 
 
 def _flatten_nested_iterable(struct):
