@@ -53,9 +53,10 @@ small compute cluster (32 nodes) for various bioinformatics projects.
 **Contents:**
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    setup
+   modules
    license
 
 **Indices and tables**
@@ -65,7 +66,7 @@ small compute cluster (32 nodes) for various bioinformatics projects.
 * :ref:`search`
 
 .. _Pied Piper: http://www.piedpiper.com/
-.. _Ruffus: http://ruffus.readthedocs.io/en/latest/
+.. _Ruffus: http://www.ruffus.org.uk/
 .. _SGE: https://en.wikipedia.org/wiki/Oracle_Grid_Engine
 .. _Galaxy: https://galaxyproject.org/
 .. _CWL: http://www.commonwl.org/
