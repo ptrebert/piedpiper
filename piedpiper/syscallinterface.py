@@ -35,7 +35,8 @@ import piedpiper.jobfunctions as jf
 
 
 class SysCallInterface(object):
-    """ This interface class encapsulates all references to DRMAA
+    """
+    This interface class encapsulates all references to DRMAA
      objects and supports the 'with' context manager to ensure clean
      shutdown of the DRMAA session
     """
@@ -78,8 +79,10 @@ class SysCallInterface(object):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """ When exiting, take care of cleaning up JobTemplates and closing
+        """
+        When exiting, take care of cleaning up JobTemplates and closing
         the session to avoid memory leaks
+
         :param exc_type:
         :param exc_val:
         :param exc_tb:
@@ -98,7 +101,8 @@ class SysCallInterface(object):
                 sys.stderr.write('\nClosing DRMAA session failed: {}\n'.format(e))
 
     def _sanity_check(self):
-        """ The sanity check function performs some
+        """
+        The sanity check function performs some
         duck typing checks, but due to the potential
         complexity of the supplied arguments, cannot check
         for their semantic correctness
@@ -119,7 +123,8 @@ class SysCallInterface(object):
         return
 
     def _configure_jobtemplate(self, jobtemplate):
-        """ Configure a JobTemplate object according to the
+        """
+        Configure a JobTemplate object according to the
         current configuration of the SystemCallInterface
         By default, the JobName is suffixed with 4 random
         uppercase letters to ease identification
@@ -141,13 +146,15 @@ class SysCallInterface(object):
         return jobtemplate
 
     def summarize_status(self):
-        """ Return a summary string of the current status, i.e.
+        """
+        Return a summary string of the current status, i.e.
         loaded modules and configuration
         """
         raise NotImplementedError
 
     def set_config_env(self, config, env):
-        """ Update static and environment configuration if
+        """
+        Update static and environment configuration if
         provided.
         Note to myself: since both are mutable objects subject
         to change in the global scope, deepcopy is probably a
@@ -162,7 +169,8 @@ class SysCallInterface(object):
         return
 
     def local_job(self):
-        """ Basic system call using Python's subprocess class
+        """
+        Basic system call using Python's subprocess class
         Callable object returns stdout and stderr
         This is semantically equivalent to the ruffus_localjob
         below - just w/o depending on Ruffus obviously
@@ -170,11 +178,13 @@ class SysCallInterface(object):
         kwargs = dict()
         kwargs['workdir'] = self.config.get('workdir', None)
         kwargs['env'] = self.config.get('env', None)
+        kwargs['activate'] = self.config.get('activate', None)
         call_me = fnt.partial(sc.custom_systemcall, **kwargs)
         return call_me
 
     def ruffus_gridjob(self):
-        """ This job type is suitable for arbitrary command lines
+        """
+        This job type is suitable for arbitrary command lines
         as the command string is written to a temporary shell script
         and then submitted
         """
@@ -186,11 +196,13 @@ class SysCallInterface(object):
         kwargs['working_directory'] = self.config.get('workdir', None)
         kwargs['drmaa_session'] = self.session
         kwargs['retain_job_scripts'] = bool(int(self.config.get('keepscripts', False)))
+        kwargs['activate'] = self.config.get('activate', None)
         call_me = fnt.partial(self.ruffus_drmaa.run_job, **kwargs)
         return call_me
 
     def ruffus_localjob(self):
-        """ This job type is suitable for arbitrary command lines
+        """
+        This job type is suitable for arbitrary command lines
         as the command string is written to a temporary shell script
         and then submitted
         """
@@ -199,11 +211,13 @@ class SysCallInterface(object):
         kwargs['working_directory'] = self.config.get('workdir', None)
         kwargs['run_locally'] = True  # here is the switch
         kwargs['local_echo'] = True
+        kwargs['activate'] = self.config.get('activate', None)
         call_me = fnt.partial(self.ruffus_drmaa.run_job, **kwargs)
         return call_me
 
     def drmaa_singlejob(self):
-        """ This job type can be used w/o Ruffus, i.e. it directly
+        """
+        This job type can be used w/o Ruffus, i.e. it directly
         interfaces with the Grid Engine and can thus only be used
         for proper commands (shell scripts or binaries if the native
         specification is set appropriately)
@@ -216,11 +230,13 @@ class SysCallInterface(object):
         kwargs['session'] = self.session
         kwargs['waitforever'] = self.drmaa_mod.Session.TIMEOUT_WAIT_FOREVER
         kwargs['lock'] = self.lock
+        kwargs['activate'] = self.config.get('activate', None)
         call_me = fnt.partial(sc.drmaa_singlejob, **kwargs)
         raise call_me
 
     def drmaa_singlejob_argv(self):
-        """ Same as drmaa_singlejob, but command line arguments can
+        """
+        Same as drmaa_singlejob, but command line arguments can
         be passed to the job (list of strings). These are then
         accessible via $1, $2 and so on
         """
@@ -232,11 +248,13 @@ class SysCallInterface(object):
         kwargs['session'] = self.session
         kwargs['waitforever'] = self.drmaa_mod.Session.TIMEOUT_WAIT_FOREVER
         kwargs['lock'] = self.lock
+        kwargs['activate'] = self.config.get('activate', None)
         call_me = fnt.partial(sc.drmaa_singlejob_argv, **kwargs)
         raise call_me
 
     def drmaa_arrayjob(self, start, end, step=1):
-        """ This job type can be used w/o Ruffus, i.e. it directly
+        """
+        This job type can be used w/o Ruffus, i.e. it directly
         interfaces with the Grid Engine and can thus only be used
         for proper commands (very likely only shell scripts or specialized
         tools aware of the SGE_TASK_ID variable)
@@ -251,11 +269,13 @@ class SysCallInterface(object):
         kwargs['session'] = self.session
         kwargs['waitforever'] = self.drmaa_mod.Session.TIMEOUT_WAIT_FOREVER
         kwargs['lock'] = self.lock
+        kwargs['activate'] = self.config.get('activate', None)
         call_me = fnt.partial(sc.drmaa_arrayjob, **kwargs)
         raise call_me
 
     def drmaa_arrayjob_argv(self, start, end, step=1):
-        """ Same as drmaa_arrayjob, but command line arguments can
+        """
+        Same as drmaa_arrayjob, but command line arguments can
         be passed to the job (list of strings). These are then
         accessible via $1, $2 and so on
         """
@@ -269,12 +289,14 @@ class SysCallInterface(object):
         kwargs['session'] = self.session
         kwargs['waitforever'] = self.drmaa_mod.Session.TIMEOUT_WAIT_FOREVER
         kwargs['lock'] = self.lock
+        kwargs['activate'] = self.config.get('activate', None)
         call_me = fnt.partial(sc.drmaa_arrayjob_argv, **kwargs)
         return call_me
 
     @staticmethod
     def get_jobf(jfname):
-        """ Pass generic job functions to the caller. These job functions
+        """
+        Pass generic job functions to the caller. These job functions
         fit Ruffus pipeline tasks
 
         :param jfname:

@@ -1,7 +1,7 @@
 # coding=utf-8
 
 """
-Module for convenience wrappers to schedule DRMAA jobs
+Module for convenience wrappers to schedule DRMAA jobs or local system calls
 """
 
 import os as os
@@ -9,6 +9,12 @@ import io as io
 import subprocess as sp
 import traceback as trb
 import fnmatch as fnm
+import functools as fnt
+
+# As note to self from DRMAA Python docs
+# JobInfo = namedtuple("JobInfo",
+#                     """jobId hasExited hasSignal terminatedSignal hasCoreDump
+#                        wasAborted exitStatus resourceUsage""")
 
 
 def _read_output_file(filepath, endpattern, attempts=3):
@@ -35,6 +41,31 @@ def _read_output_file(filepath, endpattern, attempts=3):
     return content
 
 
+def exec_env(syscall):
+    """
+    :param syscall:
+    :return:
+    """
+    @fnt.wraps(syscall)
+    def wrap_env(*args, **kwargs):
+        """
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        kwtmp = dict(kwargs)
+        assert len(args) == 1, 'Expecting command line as single positional argument'
+        cmdtmp = args[0]
+        if 'activate' in kwtmp:
+            env = kwtmp['activate']
+            if env is not None:
+                cmdtmp = 'source activate {} && '.format(env) + cmdtmp + ' ; source deactivate'
+            del kwtmp['activate']
+        return syscall(cmdtmp, **kwtmp)
+    return wrap_env
+
+
+@exec_env
 def drmaa_singlejob(cmd, jobtemplate, session, waitforever, lock):
     """
     :param cmd:
@@ -57,6 +88,7 @@ def drmaa_singlejob(cmd, jobtemplate, session, waitforever, lock):
         return out, err
 
 
+@exec_env
 def drmaa_singlejob_argv(cmd, argv, jobtemplate, session, waitforever, lock):
     """
     :param cmd:
@@ -99,6 +131,8 @@ def _handle_drmaa_singlejob(jid, session, waitforever, outpath, errpath):
         except Exception as e:
             err.append('Checking job status failed: {}'.format(str(e)))
         retval = session.wait(jid, waitforever)
+        if retval.exitStatus != 0:
+            err.append('Exit {} - Error'.format(retval.exitStatus))
         out.append('Job {} finished with status: {} - [Was aborted? {}]'.format(jid, retval.hasExited, retval.wasAborted))
         if 'start_time' in retval.resourceUsage:
             ru = retval.resourceUsage
@@ -119,6 +153,7 @@ def _handle_drmaa_singlejob(jid, session, waitforever, outpath, errpath):
         return '\n'.join(out), '\n'.join(err)
 
 
+@exec_env
 def drmaa_arrayjob(cmd, jobtemplate, session, waitforever, lock, start, end, step):
     """
     :param cmd:
@@ -141,6 +176,7 @@ def drmaa_arrayjob(cmd, jobtemplate, session, waitforever, lock, start, end, ste
         return out, err
 
 
+@exec_env
 def drmaa_arrayjob_argv(cmd, argv, jobtemplate, session, waitforever, lock, start, end, step):
     """
     :param cmd:
@@ -187,6 +223,8 @@ def _handle_drmaa_arrayjob(jids, session, waitforever, outpath, errpath):
         for j in jids:
             try:
                 retval = session.wait(j, waitforever)
+                if retval.exitStatus != 0:
+                    err.append('Exit {} - Error'.format(retval.exitStatus))
                 out.append('Job {} finished with status: {} - [Was aborted? {}]'.format(j, retval.hasExited, retval.wasAborted))
                 if 'start_time' in retval.resourceUsage:
                     ru = retval.resourceUsage
@@ -212,6 +250,7 @@ def _handle_drmaa_arrayjob(jids, session, waitforever, outpath, errpath):
         return '\n'.join(out), '\n'.join(err)
 
 
+@exec_env
 def custom_systemcall(cmd, workdir=None, env=None):
     """
     :param cmd:
@@ -221,7 +260,8 @@ def custom_systemcall(cmd, workdir=None, env=None):
     """
     out, err = '', ''
     try:
-        proc = sp.Popen(cmd, cwd=workdir, env=env, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
+        proc = sp.Popen(cmd, cwd=workdir, env=env, shell=True,
+                        stdout=sp.PIPE, stderr=sp.PIPE, executable='/bin/bash')
         out, err = proc.communicate()
         if proc.returncode != 0:
             out = out.decode('utf-8')
