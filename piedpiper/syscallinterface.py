@@ -17,6 +17,7 @@ from string import ascii_uppercase as ASCII
 from threading import Lock
 
 import piedpiper.syscalls as sc
+from piedpiper.syscalls import exec_env
 import piedpiper.jobfunctions as jf
 
 # For reference
@@ -182,6 +183,17 @@ class SysCallInterface(object):
         call_me = fnt.partial(sc.custom_systemcall, **kwargs)
         return call_me
 
+    def _wraps_ruffus(self, cmd, **kwargs):
+        """
+        :param jobfunction:
+        :return:
+        """
+        kwtmp = dict(kwargs)
+        env = kwtmp['activate']
+        del kwtmp['activate']
+        cmdtmp = 'source activate {} && '.format(env) + cmd + ' ; source deactivate'
+        return self.ruffus_drmaa.run_job(cmdtmp, **kwtmp)
+
     def ruffus_gridjob(self):
         """
         This job type is suitable for arbitrary command lines
@@ -196,8 +208,12 @@ class SysCallInterface(object):
         kwargs['working_directory'] = self.config.get('workdir', None)
         kwargs['drmaa_session'] = self.session
         kwargs['retain_job_scripts'] = bool(int(self.config.get('keepscripts', False)))
-        kwargs['activate'] = self.config.get('activate', None)
-        call_me = fnt.partial(self.ruffus_drmaa.run_job, **kwargs)
+        use_env = self.config.get('activate', None)
+        if use_env is None:
+            call_me = fnt.partial(self.ruffus_drmaa.run_job, **kwargs)
+        else:
+            kwargs['activate'] = use_env
+            call_me = fnt.partial(self._wraps_ruffus, **kwargs)
         return call_me
 
     def ruffus_localjob(self):
@@ -211,8 +227,12 @@ class SysCallInterface(object):
         kwargs['working_directory'] = self.config.get('workdir', None)
         kwargs['run_locally'] = True  # here is the switch
         kwargs['local_echo'] = True
-        kwargs['activate'] = self.config.get('activate', None)
-        call_me = fnt.partial(self.ruffus_drmaa.run_job, **kwargs)
+        use_env = self.config.get('activate', None)
+        if use_env is None:
+            call_me = fnt.partial(self.ruffus_drmaa.run_job, **kwargs)
+        else:
+            kwargs['activate'] = use_env
+            call_me = fnt.partial(self._wraps_ruffus, *(self.ruffus_drmaa.run_job, ), **kwargs)
         return call_me
 
     def drmaa_singlejob(self):
