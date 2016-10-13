@@ -1,0 +1,5 @@
+name: piedpiper
+dependencies:
+  - python=3.5
+  - drmaa=0.7.6
+  - ruffus=2.6.3
