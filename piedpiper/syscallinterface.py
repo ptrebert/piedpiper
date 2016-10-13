@@ -209,6 +209,11 @@ class SysCallInterface(object):
         kwargs['drmaa_session'] = self.session
         kwargs['retain_job_scripts'] = bool(int(self.config.get('keepscripts', False)))
         use_env = self.config.get('activate', None)
+        # Due to this issue https://github.com/conda/conda/issues/2502,
+        # it is currently not possible to use Conda environments in parallel
+        # The solution is scheduled for Conda 4.3
+        # Hard workaround for the time being...
+        use_env = None
         if use_env is None:
             call_me = fnt.partial(self.ruffus_drmaa.run_job, **kwargs)
         else:
@@ -228,6 +233,11 @@ class SysCallInterface(object):
         kwargs['run_locally'] = True  # here is the switch
         kwargs['local_echo'] = True
         use_env = self.config.get('activate', None)
+        # Due to this issue https://github.com/conda/conda/issues/2502,
+        # it is currently not possible to use Conda environments in parallel
+        # The solution is scheduled for Conda 4.3
+        # Hard workaround for the time being...
+        use_env = None
         if use_env is None:
             call_me = fnt.partial(self.ruffus_drmaa.run_job, **kwargs)
         else:
