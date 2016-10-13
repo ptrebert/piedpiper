@@ -33,6 +33,8 @@ echo "#!/bin/sh" > ./etc/conda/deactivate.d/env_vars.sh
 
 echo "" >> ./etc/conda/deactivate.d/env_vars.sh
 
+echo "unset PYTHONPATH" >> ./etc/conda/deactivate.d/env_vars.sh
+
 echo "unset DRMAA_LIBRARY_PATH" >> ./etc/conda/deactivate.d/env_vars.sh
 
 echo "unset SGE_ROOT" >> ./etc/conda/deactivate.d/env_vars.sh
