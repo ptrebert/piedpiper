@@ -28,6 +28,7 @@ In order to run jobs on a compute cluster via a DRMAA-compatible batch-queuing s
 * export SGE_CELL= (environment specific, default is "default")
 
 Additionally, the path to the DRMAA shared library has to be exported as follows:
+
 * export DRMAA_LIBRARY_PATH= (commonly "/usr/lib/libdrmaa.so")
 
 Contact the system administrator to find out the correct values for these variables. Export these variables in the shell environment where you execute Pied Piper. The following is an example stating the specific values for the (DEEP specific) development environment of Pied Piper:
@@ -42,9 +43,10 @@ Contact the system administrator to find out the correct values for these variab
 Conda environment
 #################
 You can simplify the above setup procedure by making use of the excellent Conda_ package manager (an awesome tool!).
-At the moment, Pied Piper has not been packaged, i.e., setup involves several steps:
+At the moment, Pied Piper is not yet available as a predefined package, i.e., setup involves several steps:
 
 Step-by-step guide:
+
 0. Clone the Pied Piper repository to a suitable location like *HOME*: :bash:`git clone https://github.molgen.mpg.de/pebert/piedpiper`
 1. Install the Miniconda_ base package suitable for you architecture by following the guide on the website
 2. Make sure the setup was successful by typing :bash:`conda --help` (which should not give an error) at the shell
