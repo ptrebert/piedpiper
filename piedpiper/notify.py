@@ -32,5 +32,5 @@ def send_email_notification(to_addr, from_addr, subject, body, smtp='localhost')
     msg['To'] = to_addr
     s = smtplib.SMTP(smtp)
     s.send_message(msg)
-    s.quit()
-    return
+    code, retmsg = s.quit()
+    return code, retmsg.decode('utf-8')

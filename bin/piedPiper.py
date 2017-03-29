@@ -52,7 +52,9 @@ def piper_argument_parser():
     parser.add_argument('--email-user', '-usr', dest='notify', default='', type=str,
                         help='If a valid email address is specified, a notification is sent upon exit of'
                              ' Pied Piper. Note that this requires that localhost is configured as SMTP'
-                             ' server or knows where to find one.')
+                             ' server or knows where to find one (= forwards to actual SMTP server).')
+    parser.add_argument('--from-addr', '-fad', dest='fromaddr', default='do-not-reply@mpi-inf.mpg.de',
+                        type=str, help='Specify a "From" address for the notification email.')
     parser.add_argument('--limit-size', '-sz', dest='sizelimit', default=3000, type=int,
                         help='Specify the number of characters to send via email from the exception message'
                              ' and from the stack traceback. This number is divided by two and the first'
@@ -145,7 +147,7 @@ def make_debug_dump(config):
     return
 
 
-def notify_user(user_addr, start, end, exc, runinfo, err, trb, limit):
+def notify_user(user_addr, from_addr, start, end, exc, runinfo, err, trb, limit):
     """
     :param user_addr:
     :param start:
@@ -172,7 +174,8 @@ def notify_user(user_addr, start, end, exc, runinfo, err, trb, limit):
         values = {'username': username, 'exit': exc, 'start': start, 'end': end,
                   'error': err, 'trace': trb, 'runinfo': runinfo}
         body = body.format(**values)
-        send_email_notification(user_addr, 'pied.piper@pipeline.run', subject, body)
+        code, msg = send_email_notification(user_addr, from_addr, subject, body)
+        #sys.stderr.write('\nSMTP quit received code {} and message {}\n'.format(code, msg))
     except Exception as e:
         sys.stderr.write('\nSending notification email failed: {}\n'.format(e))
     finally:
@@ -213,7 +216,7 @@ if __name__ == '__main__':
                 raise RuntimeError('Pied Piper run mode {} not recognized'.format(args.runmode))
         end = time.ctime()
         if args and args.notify:
-            notify_user(args.notify, start, end, exc, run_info, 'none', 'none', args.sizelimit)
+            notify_user(args.notify, args.fromaddr, start, end, exc, run_info, 'none', 'none', args.sizelimit)
     except Exception as e:
         end = time.ctime()
         buf = io.StringIO()
@@ -222,6 +225,6 @@ if __name__ == '__main__':
         sys.stderr.write('\n{}\n'.format(buf.getvalue()))
         exc = 1
         if args.notify:
-            notify_user(args.notify, start, end, exc, run_info, str(e), buf.getvalue(), args.sizelimit)
+            notify_user(args.notify, args.fromaddr, start, end, exc, run_info, str(e), buf.getvalue(), args.sizelimit)
     finally:
         sys.exit(exc)
