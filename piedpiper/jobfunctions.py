@@ -98,10 +98,15 @@ def _run_command(cmd, formatter, syscall, posrep=False):
     :return: None
     :rtype: NoneType
     """
+    # repeatedly ran into my own imbecility...
+    # Python's configparser allows multiline values,
+    # need to replace line breaks in order to have them
+    # correctly interpreted as commands by the shell
+    tmp = cmd.replace('\n', ' ')
     if posrep:
-        tmp = cmd.format(*formatter)
+        tmp = tmp.format(*formatter)
     else:
-        tmp = cmd.format(**formatter)
+        tmp = tmp.format(**formatter)
     out, err = syscall(tmp)
     out, err = _check_job(out, err)
     return None
