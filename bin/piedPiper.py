@@ -46,6 +46,11 @@ def piper_argument_parser():
                              ' DEEP SVN in /TL/deep-share/nobackup.')
     parser.add_argument('--run-mode', '-mode', dest='runmode', type=str, choices=['ruffus', 'script'], default='ruffus',
                         help='Run a regular Ruffus pipeline or a Python3 script.')
+    parser.add_argument('--run-repeat', '-rep', dest='repeat', type=int, default=1,
+                        help='Specify how many times the pipeline should be repeatedly executed'
+                             ' (no change of configuration between executions). For Ruffus, this'
+                             ' alleviates the drawback that lazy task loading is not supported'
+                             ' in current versions. Default: 1')
     parser.add_argument('--debug-only', '-dbg', dest='debug', action='store_true', default=False,
                         help='Dump a full configuration and PYTHONPATH listing to the current working directory'
                              ' after command line and configuration file parsing and exit.')
@@ -204,16 +209,19 @@ if __name__ == '__main__':
         imp_ruffus_drmaa = args.runmode == 'ruffus'
         imp_drmaa = args.runmode == 'script' and args.gridmode
         run_info = os.path.basename(args.runconfig) + ' / ' + config.get('Run', 'load_name')
+        num_exec = 0
         with SysCallInterface(imp_ruffus_drmaa, imp_drmaa) as sci_obj:
             mod = imp.import_module(mod_name)
-            if args.runmode == 'ruffus':
-                pipe = mod.build_pipeline(args, config, sci_obj)
-                cmdline.run(args)
-            elif args.runmode == 'script':
-                exc = mod.run_script(args, config, sci_obj)
-            else:
-                # note that this should be caught already by ArgumentParser
-                raise RuntimeError('Pied Piper run mode {} not recognized'.format(args.runmode))
+            while num_exec < args.repeat:
+                if args.runmode == 'ruffus':
+                    pipe = mod.build_pipeline(args, config, sci_obj)
+                    cmdline.run(args)
+                elif args.runmode == 'script':
+                    exc = mod.run_script(args, config, sci_obj)
+                else:
+                    # note that this should be caught already by ArgumentParser
+                    raise RuntimeError('Pied Piper run mode {} not recognized'.format(args.runmode))
+                num_exec += 1
         end = time.ctime()
         if args and args.notify:
             notify_user(args.notify, args.fromaddr, start, end, exc, run_info, 'none', 'none', args.sizelimit)
