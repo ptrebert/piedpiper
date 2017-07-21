@@ -210,9 +210,9 @@ if __name__ == '__main__':
         imp_drmaa = args.runmode == 'script' and args.gridmode
         run_info = os.path.basename(args.runconfig) + ' / ' + config.get('Run', 'load_name')
         num_exec = 0
-        with SysCallInterface(imp_ruffus_drmaa, imp_drmaa) as sci_obj:
-            mod = imp.import_module(mod_name)
-            while num_exec < args.repeat:
+        while num_exec < args.repeat:
+            with SysCallInterface(imp_ruffus_drmaa, imp_drmaa) as sci_obj:
+                mod = imp.import_module(mod_name)
                 if args.runmode == 'ruffus':
                     pipe = mod.build_pipeline(args, config, sci_obj)
                     cmdline.run(args)
@@ -221,7 +221,7 @@ if __name__ == '__main__':
                 else:
                     # note that this should be caught already by ArgumentParser
                     raise RuntimeError('Pied Piper run mode {} not recognized'.format(args.runmode))
-                num_exec += 1
+            num_exec += 1
         end = time.ctime()
         if args and args.notify:
             notify_user(args.notify, args.fromaddr, start, end, exc, run_info, 'none', 'none', args.sizelimit)
