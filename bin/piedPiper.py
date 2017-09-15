@@ -18,7 +18,7 @@ import importlib as imp
 from piedpiper.syscallinterface import SysCallInterface
 from piedpiper.notify import send_email_notification
 
-__version__ = '0.1.1'
+__version__ = '0.2'
 
 __description__ = "Pied Piper is a deliberately simple pipeline runner that can execute either Ruffus pipelines" \
                   " or Python3 scripts with the ability to directly interface a grid engine via DRMAA bindings." \
@@ -210,18 +210,19 @@ if __name__ == '__main__':
         imp_drmaa = args.runmode == 'script' and args.gridmode
         run_info = os.path.basename(args.runconfig) + ' / ' + config.get('Run', 'load_name')
         num_exec = 0
-        while num_exec < args.repeat:
-            with SysCallInterface(imp_ruffus_drmaa, imp_drmaa) as sci_obj:
-                mod = imp.import_module(mod_name)
+        pipe = None
+        with SysCallInterface(imp_ruffus_drmaa, imp_drmaa) as sci_obj:
+            mod = imp.import_module(mod_name)
+            while num_exec < args.repeat:
                 if args.runmode == 'ruffus':
-                    pipe = mod.build_pipeline(args, config, sci_obj)
+                    pipe = mod.build_pipeline(args, config, sci_obj, pipe)
                     cmdline.run(args)
                 elif args.runmode == 'script':
                     exc = mod.run_script(args, config, sci_obj)
                 else:
                     # note that this should be caught already by ArgumentParser
                     raise RuntimeError('Pied Piper run mode {} not recognized'.format(args.runmode))
-            num_exec += 1
+                num_exec += 1
         end = time.ctime()
         if args and args.notify:
             notify_user(args.notify, args.fromaddr, start, end, exc, run_info, 'none', 'none', args.sizelimit)
