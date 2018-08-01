@@ -152,12 +152,14 @@ def make_debug_dump(config):
     return
 
 
-def notify_user(user_addr, from_addr, start, end, exc, runinfo, err, trb, limit):
+def notify_user(user_addr, from_addr, start, end, exc, runinfo, terminfo, err, trb, limit):
     """
     :param user_addr:
     :param start:
     :param end:
     :param exc: exit code
+    :param runinfo: Path of loaded run configuration
+    :param terminfo: value of $STY
     :param err: the exception, if applicable
     :param trb: the stack traceback, if applicable
     :param limit: character limit for sending error information
@@ -173,11 +175,12 @@ def notify_user(user_addr, from_addr, start, end, exc, runinfo, err, trb, limit)
         username = user_addr.split('@')[0]
         body = 'Hello {username},\nyour Pied Piper run finished with status: {exit}\n'\
                'Start time: {start}\nEnd time: {end}\n'\
-               'Run info: {runinfo}\n\n'\
+               'Run info: {runinfo}\n'\
+               'Screen: {terminfo}\n\n'\
                'Exception: {error}\n\nStack traceback: {trace}\n\n' \
                'Have a nice day!\nPied Piper'
         values = {'username': username, 'exit': exc, 'start': start, 'end': end,
-                  'error': err, 'trace': trb, 'runinfo': runinfo}
+                  'error': err, 'trace': trb, 'runinfo': runinfo, 'terminfo': terminfo}
         body = body.format(**values)
         code, msg = send_email_notification(user_addr, from_addr, subject, body)
         #sys.stderr.write('\nSMTP quit received code {} and message {}\n'.format(code, msg))
@@ -192,6 +195,7 @@ if __name__ == '__main__':
     start = time.ctime()
     args = None
     run_info = 'ERROR'
+    term_info = 'UNKNOWN'
     try:
         args, unknown_args = piper_argument_parser()
         config = piper_configuration_parser(args)
@@ -209,6 +213,10 @@ if __name__ == '__main__':
         imp_ruffus_drmaa = args.runmode == 'ruffus'
         imp_drmaa = args.runmode == 'script' and args.gridmode
         run_info = os.path.basename(args.runconfig) + ' / ' + config.get('Run', 'load_name')
+        try:
+            term_info = os.environ['STY']
+        except KeyError:
+            term_info = 'none'
         num_exec = 0
         pipe = None
         with SysCallInterface(imp_ruffus_drmaa, imp_drmaa) as sci_obj:
@@ -225,7 +233,8 @@ if __name__ == '__main__':
                 num_exec += 1
         end = time.ctime()
         if args and args.notify:
-            notify_user(args.notify, args.fromaddr, start, end, exc, run_info, 'none', 'none', args.sizelimit)
+            notify_user(args.notify, args.fromaddr, start, end, exc,
+                        run_info, term_info, 'none', 'none', args.sizelimit)
     except Exception as e:
         end = time.ctime()
         buf = io.StringIO()
@@ -234,6 +243,7 @@ if __name__ == '__main__':
         sys.stderr.write('\n{}\n'.format(buf.getvalue()))
         exc = 1
         if args.notify:
-            notify_user(args.notify, args.fromaddr, start, end, exc, run_info, str(e), buf.getvalue(), args.sizelimit)
+            notify_user(args.notify, args.fromaddr, start, end, exc,
+                        run_info, term_info, str(e), buf.getvalue(), args.sizelimit)
     finally:
         sys.exit(exc)
